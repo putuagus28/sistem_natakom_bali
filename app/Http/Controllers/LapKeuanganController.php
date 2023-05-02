@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Session;
 use Maatwebsite\Excel\Facades\Excel;
 use PDF;
 use Illuminate\Support\Facades\DB;
-
+use Carbon\Carbon;
 
 class LapKeuanganController extends Controller
 {
@@ -170,7 +170,6 @@ class LapKeuanganController extends Controller
         ];
         $data['jenis'] = $jenis;
         return view('laporan_keuangan.' . $jenis, $data);
-
         return abort(404);
     }
 
@@ -273,7 +272,13 @@ class LapKeuanganController extends Controller
                 <tbody>';
 
                 // get jurnal
-                $jurnal = Jurnal::with('akun')->where('akuns_id', $item['id'])->orderBy('created_at', 'asc')->get();
+                $jurnal = Jurnal::with('akun')
+                    ->where('akuns_id', $item['id'])
+                    ->whereMonth('tanggal', '>=', $req->bulan_awal)
+                    ->whereMonth('tanggal', '<=', $req->bulan_akhir)
+                    ->whereYear('tanggal', '=', $req->tahun)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
                 $saldo = 0;
                 $row = [];
                 $jenis = '';
@@ -427,15 +432,15 @@ class LapKeuanganController extends Controller
                         $html .= '<td class="text-right">-</td>';
                         $debet += $this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
                     } else {
-                        if ($item->id == "f30ecc37-5681-491c-be4e-7840438f1e80") {
-                            $html .= '<td class="text-right">Rp. ' . str_replace('', '', number_format($this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun), 0, ',', '.')) . '</td>';
-                            $html .= '<td class="text-right">-</td>';
-                            $debet += $this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
-                        } else {
-                            $html .= '<td class="text-right">-</td>';
-                            $html .= '<td class="text-right">Rp. ' . str_replace('', '', number_format($this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun), 0, ',', '.')) . '</td>';
-                            $kredit += $this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
-                        }
+                        // if ($item->id == "f30ecc37-5681-491c-be4e-7840438f1e80") {
+                        //     $html .= '<td class="text-right">Rp. ' . str_replace('', '', number_format($this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun), 0, ',', '.')) . '</td>';
+                        //     $html .= '<td class="text-right">-</td>';
+                        //     $debet += $this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
+                        // } else {
+                        $html .= '<td class="text-right">-</td>';
+                        $html .= '<td class="text-right">Rp. ' . str_replace('', '', number_format($this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun), 0, ',', '.')) . '</td>';
+                        $kredit += $this->get_buku_besar($item->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
+                        // }
                     }
                     $html .= '</tr>';
                 }
@@ -543,7 +548,7 @@ class LapKeuanganController extends Controller
             <tbody>';
 
             $kategori = ['Kewajiban', 'Modal'];
-            $notIn = ['2258fa19-9845-4f64-b217-44b5a58e8199', 'f30ecc37-5681-491c-be4e-7840438f1e80']; // hpp dan prive tidak masuk ke neraca
+            $notIn = ['2258fa19-9845-4f64-b217-44b5a58e8199']; // hpp dan prive tidak masuk ke neraca
             $kredit = 0;
             $tb2_count = 0;
             foreach ($kategori as $k) {
@@ -646,7 +651,6 @@ class LapKeuanganController extends Controller
                         <th>No. Akun</th>
                         <th>Nama Akun</th>
                         <th class="text-right">Nominal</th>
-                        <th class="text-right">Nominal</th>
                         <th class="text-right">Total</th>
                     </tr>
                 </thead>
@@ -660,15 +664,14 @@ class LapKeuanganController extends Controller
                 $html .= '<tr>';
                 $html .= '<td class="text-left">' . $v->akun->no_reff . '</td>';
                 $html .= '<td class="text-left">' . $v->akun->akun . '</td>';
-                $html .= '<td class="text-right">' . ($v->debet == 0 ? '' : 'Rp ' . number_format($v->debet, 0, ',', '.')) . '</td>';
-                $html .= '<td class="text-right">' . ($v->kredit == 0 ? '' : 'Rp ' . number_format($v->kredit, 0, ',', '.')) . '</td>';
+                $html .= '<td class="text-right">' . ($v->debet == 0 ? 'Rp ' . number_format($v->kredit, 0, ',', '.') : 'Rp ' . number_format($v->debet, 0, ',', '.')) . '</td>';
+                // $html .= '<td class="text-right">' . ($v->kredit == 0 ? '' : 'Rp ' . number_format($v->kredit, 0, ',', '.')) . '</td>';
                 $html .= '<td class="text-right"></td>';
                 $html .= '</tr>';
                 $p_total += $v->debet == 0 ? $v->kredit : $v->debet;
             }
             $html .= '<tr>';
             $html .= '<td colspan="2" class="font-weight-bold text-right">Total Pendapatan</td>';
-            $html .= '<td></td>';
             $html .= '<td></td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($p_total, 0, ',', '.') . '</td>';
             $html .= '</tr>';
@@ -678,8 +681,8 @@ class LapKeuanganController extends Controller
                 $html .= '<tr>';
                 $html .= '<td class="text-left">' . $v->akun->no_reff . '</td>';
                 $html .= '<td class="text-left">' . $v->akun->akun . '</td>';
-                $html .= '<td class="text-right">' . ($v->debet == 0 ? '' : 'Rp ' . number_format($v->debet, 0, ',', '.')) . '</td>';
-                $html .= '<td class="text-right">' . ($v->kredit == 0 ? '' : 'Rp ' . number_format($v->kredit, 0, ',', '.')) . '</td>';
+                $html .= '<td class="text-right">' . ($v->debet == 0 ? 'Rp ' . number_format($v->kredit, 0, ',', '.') : 'Rp ' . number_format($v->debet, 0, ',', '.')) . '</td>';
+                // $html .= '<td class="text-right">' . ($v->kredit == 0 ? '' : 'Rp ' . number_format($v->kredit, 0, ',', '.')) . '</td>';
                 $html .= '<td class="text-right"></td>';
                 $html .= '</tr>';
                 $hpp_total += $v->debet == 0 ? $v->kredit : $v->debet;
@@ -690,15 +693,13 @@ class LapKeuanganController extends Controller
                 $html .= '<tr>';
                 $html .= '<td class="text-left">' . $v->akun->no_reff . '</td>';
                 $html .= '<td class="text-left">' . $v->akun->akun . '</td>';
-                $html .= '<td class="text-right">' . ($v->debet == 0 ? '' : 'Rp ' . number_format($v->debet, 0, ',', '.')) . '</td>';
-                $html .= '<td class="text-right">' . ($v->kredit == 0 ? '' : 'Rp ' . number_format($v->kredit, 0, ',', '.')) . '</td>';
+                $html .= '<td class="text-right">' . ($v->debet == 0 ? 'Rp ' . number_format($v->kredit, 0, ',', '.') : 'Rp ' . number_format($v->debet, 0, ',', '.')) . '</td>';
                 $html .= '<td class="text-right"></td>';
                 $html .= '</tr>';
                 $beban_total += $v->debet == 0 ? $v->kredit : $v->debet;
             }
             $html .= '<tr>';
             $html .= '<td colspan="2" class="font-weight-bold text-right">Total Biaya</td>';
-            $html .= '<td></td>';
             $html .= '<td></td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($hpp_total + $beban_total, 0, ',', '.') . '</td>';
             $html .= '</tr>';
@@ -708,12 +709,10 @@ class LapKeuanganController extends Controller
             $html .= '<td>&nbsp;</td>';
             $html .= '<td>&nbsp;</td>';
             $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
             $html .= '</tr>';
 
             $html .= '<tr>';
             $html .= '<td colspan="2" class="font-weight-bold text-right">Total Laba Rugi</td>';
-            $html .= '<td></td>';
             $html .= '<td></td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($p_total - ($hpp_total + $beban_total), 0, ',', '.') . '</td>';
             $html .= '</tr>';
@@ -768,7 +767,8 @@ class LapKeuanganController extends Controller
             $html .= '</tr>';
 
             $html .= '<tr>';
-            $html .= '<td class="text-left">Laba bersih ' . date('j', strtotime($date_now)) . ' ' . $b[$req->bulan_awal - 1] . ' ' . date('Y', strtotime($date_now)) . '</td>';
+            // $html .= '<td class="text-left">Laba bersih ' . date('j', strtotime($date_now)) . ' ' . $b[$req->bulan_awal - 1] . ' ' . date('Y', strtotime($date_now)) . '</td>';
+            $html .= '<td class="text-left">Laba bersih</td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($saldo_laba_rugi, 0, ',', '.') . '</td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format(0, 0, ',', '.') . '</td>';
             $html .= '</tr>';
@@ -945,41 +945,9 @@ class LapKeuanganController extends Controller
                 'html' => $html
             ];
         } else if ($req->jenis == "arus_kas") {
-            $query1 = Jurnal::with('akun')->whereHas('akun', function ($q) {
-                $q->where('kategori', 'Pendapatan');
-            })
-                ->select('*', DB::raw('DATE_FORMAT(tanggal, "%d-%m-%Y") as tanggal'))
-                ->whereMonth('tanggal', '>=', $req->bulan_awal)
-                ->whereMonth('tanggal', '<=', $req->bulan_akhir)
-                ->whereYear('tanggal', '=', $req->tahun)
-                ->orderBy('tanggal', 'desc')
-                ->get();
 
-            $query2 = Jurnal::with('akun')->whereHas('akun', function ($q) {
-                $q->where('kategori', 'Harga Pokok Penjualan');
-            })
-                ->select('*', DB::raw('DATE_FORMAT(tanggal, "%d-%m-%Y") as tanggal'))
-                ->whereMonth('tanggal', '>=', $req->bulan_awal)
-                ->whereMonth('tanggal', '<=', $req->bulan_akhir)
-                ->whereYear('tanggal', '=', $req->tahun)
-                ->orderBy('tanggal', 'desc')
-                ->get();
-
-            $query3 = Jurnal::with('akun')->whereHas('akun', function ($q) {
-                $q->where('kategori', 'Beban');
-            })
-                ->select('*', DB::raw('DATE_FORMAT(tanggal, "%d-%m-%Y") as tanggal'))
-                ->whereMonth('tanggal', '>=', $req->bulan_awal)
-                ->whereMonth('tanggal', '<=', $req->bulan_akhir)
-                ->whereYear('tanggal', '=', $req->tahun)
-                ->orderBy('tanggal', 'desc')
-                ->get();
-
-            $query4 = Jurnal::where('akuns_id', '37ef5388-1bb4-40fb-95e2-45b5e1d22939')
-                ->whereMonth('tanggal', '>=', $req->bulan_awal)
-                ->whereMonth('tanggal', '<=', $req->bulan_akhir)
-                ->whereYear('tanggal', '=', $req->tahun)
-                ->sum('debet');
+            $query1 = Akun::where('kategori', 'Pendapatan')->get();
+            $query2 = Akun::where('kategori', 'Beban')->get();
             $b = [
                 "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
                 "September", "Oktober", "November", "Desember"
@@ -992,126 +960,54 @@ class LapKeuanganController extends Controller
             $html .= '<table id="table1">';
 
             // pertama
-            // beban perlengkapan
-            $id_bp = '82bdb25b-4986-4221-aae8-87c0490b1f1d';
-            $akun_bp = Akun::find($id_bp);
-
             $html .= '<tr>';
-            $html .= '<th colspan="3">Arus Kas dari Aktivitas Operasi</th>';
+            $html .= '<th colspan="3">Arus Kas Masuk</th>';
             $html .= '</tr>';
+            $total1 = 0;
+            foreach ($query1 as $key => $v) {
+                $pendapatan = $this->get_buku_besar($v->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
+                $html .= '<tr>';
+                $html .= '<td class="text-left" width="100">&nbsp;</td>';
+                $html .= '<td class="text-left">- ' . $v->akun . '</td>';
+                $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($pendapatan, 0, ',', '.') . '</td>';
+                $html .= '</tr>';
+                $total1 += $pendapatan;
+            }
 
-            $laba = $this->laba_rugi_custom($req->bulan_awal, $req->bulan_akhir, $req->tahun);
-            $html .= '<tr>';
-            $html .= '<td class="text-left" width="100">&nbsp;</td>';
-            $html .= '<td class="text-left">- Laba (Rugi) Periode Berjalan</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($laba, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $bp = $this->get_buku_besar($akun_bp->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
-            $html .= '<tr>';
-            $html .= '<td class="text-left" width="100">&nbsp;</td>';
-            $html .= '<td class="text-left">- Peningkatan (Penurunan) Perlengkapan Kantor</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($bp, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $total1 = $laba - $bp;
             $html .= '<tr>';
             $html .= '<td>&nbsp;</td>';
-            $html .= '<td class="text-left font-weight-bold">Total</td>';
+            $html .= '<td class="text-left font-weight-bold">Total Arus Kas Masuk</td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($total1, 0, ',', '.') . '</td>';
             $html .= '</tr>';
 
             $html .= '<tr>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
+            $html .= '<th colspan="3">Arus Kas Keluar</th>';
             $html .= '</tr>';
 
-            // kedua
-            $id_penyusutan = 'f1cd888a-84f7-4318-9ec9-6b989c4a7ab3';
-            $akun_penyusutan = Akun::find($id_penyusutan);
+            $total2 = 0;
+            foreach ($query2 as $key => $v) {
+                $beban = $this->get_buku_besar($v->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
+                $html .= '<tr>';
+                $html .= '<td class="text-left" width="100">&nbsp;</td>';
+                $html .= '<td class="text-left">- ' . $v->akun . '</td>';
+                $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($beban, 0, ',', '.') . '</td>';
+                $html .= '</tr>';
+                $total2 += $beban;
+            }
 
-            $html .= '<tr>';
-            $html .= '<th colspan="3">Arus Kas dari Aktivitas Investasi</th>';
-            $html .= '</tr>';
 
-            $ppk = $this->get_buku_besar($akun_penyusutan->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
-
-            $html .= '<tr>';
-            $html .= '<td class="text-left" width="100">&nbsp;</td>';
-            $html .= '<td class="text-left">- Peningkatan (Penurunan) Peralatan Kantor</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($ppk, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $total2 = $ppk;
             $html .= '<tr>';
             $html .= '<td>&nbsp;</td>';
-            $html .= '<td class="text-left font-weight-bold">Total</td>';
+            $html .= '<td class="text-left font-weight-bold">Total Arus Kas Keluar</td>';
             $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($total2, 0, ',', '.') . '</td>';
             $html .= '</tr>';
 
             $html .= '<tr>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
+            $html .= '<th>&nbsp;</th>';
+            $html .= '<th class="text-left font-weight-bold">Total Arus Kas</th>';
+            $html .= '<th class="text-right">Rp ' . number_format($total1 - $total2, 0, ',', '.') . '</th>';
             $html .= '</tr>';
 
-            // ketiga 
-            $id_modal = '367db022-ed50-4671-9e6b-ca3efc3ea78b';
-            $akun_modal = Akun::find($id_modal);
-
-            $id_prive = 'f30ecc37-5681-491c-be4e-7840438f1e80';
-            $akun_prive = Akun::find($id_prive);
-
-            $html .= '<tr>';
-            $html .= '<th colspan="3">Arus Kas dari Aktivitas Pendanaan</th>';
-            $html .= '</tr>';
-
-            $b_modal = $this->get_perubahan_modal($req->bulan_awal, $req->bulan_akhir, $req->tahun);
-
-            $html .= '<tr>';
-            $html .= '<td class="text-left" width="100">&nbsp;</td>';
-            $html .= '<td class="text-left">- Peningkatan (Penurunan) Modal </td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($b_modal, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $b_prive = $this->get_buku_besar($akun_prive->akun, $req->bulan_awal, $req->bulan_akhir, $req->tahun);
-
-            $html .= '<tr>';
-            $html .= '<td class="text-left" width="100">&nbsp;</td>';
-            $html .= '<td class="text-left">- Prive</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($b_prive, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $total3 = $b_modal - $b_prive;
-            $html .= '<tr>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td class="text-left font-weight-bold">Total</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($total3, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $html .= '<tr>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '<td>&nbsp;</td>';
-            $html .= '</tr>';
-
-            $kas_bersih = ($total1 - $total2) + $total3;
-
-            $html .= '<tr>';
-            $html .= '<td colspan="2" class="font-weight-bold text-right">Kenaikan (Penurunan) Kas Bersih</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($kas_bersih, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $html .= '<tr>';
-            $html .= '<td colspan="2" class="font-weight-bold text-right">Kas Awal Periode</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($query4, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
-
-            $html .= '<tr>';
-            $html .= '<td colspan="2" class="font-weight-bold text-right">Kas Akhir Periode</td>';
-            $html .= '<td class="text-right font-weight-bold">Rp ' . number_format($kas_bersih, 0, ',', '.') . '</td>';
-            $html .= '</tr>';
 
             $html .= '</tbody>';
             $html .= '</table>';
@@ -1184,7 +1080,13 @@ class LapKeuanganController extends Controller
         $akun_saldo = [];
         foreach ($arr_akun as $item) {
             // get jurnal
-            $jurnal = Jurnal::with('akun')->where('akuns_id', $item['id'])->orderBy('created_at', 'asc')->get();
+            $jurnal = Jurnal::with('akun')
+                ->where('akuns_id', $item['id'])
+                ->whereMonth('tanggal', '>=', $bulan_awal)
+                ->whereMonth('tanggal', '<=', $bulan_akhir)
+                ->whereYear('tanggal', '=', $tahun)
+                ->orderBy('created_at', 'asc')
+                ->get();
             $saldo = 0;
             $row = [];
             $jenis = '';

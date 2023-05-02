@@ -138,13 +138,13 @@
                                         <th>No. Akun</th>
                                         <th>Nama Akun</th>
                                         <th>Nominal</th>
-                                        <th>Nominal</th>
+                                        {{-- <th>Nominal</th> --}}
                                         <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td colspan="5">No Data</td>
+                                        <td colspan="4">No Data</td>
                                     </tr>
                                 </tbody>
                             </table>

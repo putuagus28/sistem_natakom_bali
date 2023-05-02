@@ -220,13 +220,6 @@
                                 </a>
                             </li>
                             {{-- <li class="nav-item">
-                                <a href="{{ url('laporan_keuangan/perubahan_modal') }}"
-                                    class="nav-link {{ request()->is('laporan_keuangan/perubahan_modal') ? 'active' : '' }}">
-                                    <i class="fa fa-angle-right nav-icon"></i>
-                                    <p>Laporan Perubahan Modal</p>
-                                </a>
-                            </li> --}}
-                            {{-- <li class="nav-item">
                                 <a href="{{ url('laporan_keuangan/jurnal_penutup') }}"
                                     class="nav-link {{ request()->is('laporan_keuangan/jurnal_penutup') ? 'active' : '' }}">
                                     <i class="fa fa-angle-right nav-icon"></i>
@@ -238,6 +231,13 @@
                                     class="nav-link {{ request()->is('laporan_keuangan/arus_kas') ? 'active' : '' }}">
                                     <i class="fa fa-angle-right nav-icon"></i>
                                     <p>Laporan Arus Kas</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ url('laporan_keuangan/perubahan_modal') }}"
+                                    class="nav-link {{ request()->is('laporan_keuangan/perubahan_modal') ? 'active' : '' }}">
+                                    <i class="fa fa-angle-right nav-icon"></i>
+                                    <p>Laporan Perubahan Modal</p>
                                 </a>
                             </li>
                         </ul>
